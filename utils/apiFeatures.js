@@ -41,14 +41,19 @@ class APIFeatures {
 
         // Normalize category filter:
         // - ignore 'All'
-        // - accept category id (ObjectId string) OR category name (legacy data)
+        // - support combined token "<id>|||<name>" so both legacy (name) and newer (id) data match
         if (typeof queryCopy.category === 'string') {
-            const cat = queryCopy.category.trim();
-            if (!cat || cat.toLowerCase() === 'all') {
+            const parts = queryCopy.category
+                .split('|||')
+                .map((v) => String(v).trim())
+                .filter((v) => v && v.toLowerCase() !== 'all');
+
+            if (parts.length === 0) {
                 delete queryCopy.category;
+            } else if (parts.length === 1) {
+                queryCopy.category = parts[0];
             } else {
-                // Keep as string (both ids and names are stored as strings in Product.category)
-                queryCopy.category = cat;
+                queryCopy.category = { $in: Array.from(new Set(parts)) };
             }
         }
 
